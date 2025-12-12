@@ -1,9 +1,9 @@
 <launch>
-<node pkg="cyphal_ros2_bridge" exec="cyphal_bridge" args="--ros-args -p "config_file:=/home/pi/ros2_ws/src/cyphal_ros2_bridge/examples/test_node.json""/>
+<node pkg="cyphal_ros2_bridge" exec="cyphal_bridge" args="--ros-args -p 'config_file:=/home/pi/ros2_ws/src/cyphal_ros2_bridge/examples/test_node.json'"/>
 <node pkg="brover_move_control" exec="move_node" name="control_move"/>
 <node pkg="joy" exec="joy_node" name="joy"/>
 <node pkg="brover_radiolink_control" exec="radiolink_node" name="radiolink_control"/>
 <node pkg="brover_imu_node" exec="imu_node" name="imu"/>
 <node pkg="brover_odom_simple" exec="odom_pose2d" name="odom"/>
-<node pkg="usb_cam" exec="usb_cam_node_exe" name="usb_cam"> </node>
+<!-- <node pkg="usb_cam" exec="usb_cam_node_exe" name="usb_cam"> </node> -->
 </launch>

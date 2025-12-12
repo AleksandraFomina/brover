@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'radiolink_node = brover_radiolink_control.radiolink_node:main'
         ],
     },
 )

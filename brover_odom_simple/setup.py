@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'odom_pose2d = brover_odom_simple.odom_pose2d:main'
         ],
     },
 )

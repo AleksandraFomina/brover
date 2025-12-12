@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'move_node = brover_move_control.move_node:main'
         ],
     },
 )
