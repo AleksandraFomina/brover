@@ -4,7 +4,5 @@
 <node pkg="joy" exec="joy_node" name="joy"/>
 <node pkg="brover_radiolink_control" exec="radiolink_node" name="radiolink_control"/>
 <node pkg="brover_imu_node" exec="imu_node" name="imu"/>
-<node pkg="brover_odom_simple" exec="odom_pose2d" name="odom"/>
-<node pkg="brover_web" exec="web_server" name="web_server"/>
-<node pkg="usb_cam" exec="usb_cam_node_exe" name="usb_cam"> </node> 
+<node pkg="brover_odom_simple" exec="odom_pose2d" name="odom"/> 
 </launch>
