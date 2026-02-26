@@ -25,7 +25,8 @@ class RobotMover(Node):
         timer_period = 0.05  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
-        self.__max_vel = 10.13
+        self.__max_vel = 9.6
+        self.__min_vel = 1.0
         self.__W = 0.44 # width
         self.__B = self.__W/2.0
         self.__R = 0.0625 #wheel radius
@@ -36,21 +37,46 @@ class RobotMover(Node):
 
 
     def timer_callback(self):
-        
         for  i, pub in enumerate(self.__pubs):
             if i<3: pub.publish(self.__vel[0])
             else: pub.publish(self.__vel[1])
            # self.get_logger().info('v1,v2,v3:  "%s"' % self.__vel[0].data)
            # self.get_logger().info('v4,v5,v6: "%s"' % self.__vel[1].data)
   
-
+    def sign(self, a):
+        if a > 0:
+            return 1
+        elif a < 0:
+            return -1
+        else:
+            return a
+        
+    def check_minmax(self, l, r):
+        if abs(l) < self.__min_vel:
+            l = self.sign(l)*self.__min_vel
+        if abs(r) < self.__min_vel:
+            r = self.sign(r)*self.__min_vel
+        if abs(l) > self.__max_vel:
+            l = self.sign(l)*self.__max_vel
+        if abs(r) > self.__max_vel:
+            r = self.sign(r)*self.__max_vel
+        return l, r
+                       
+        
     def listener_callback(self, msg):
         x = float(msg.linear.x)
         zB = float(msg.angular.z)*self.__B
-        self.__vel[0].data= (x - zB)/self.__R #left wheels = (v - w*B)/r
-        self.__vel[1].data= -(x + zB)/self.__R #right wheels (v + w*B)/r
-        # self.get_logger().info('v1,v2,v3:  "%s"' % self.__vel[0].data)
-        # self.get_logger().info('v4,v5,v6: "%s"' % self.__vel[1].data)
+        l = (x - zB)/self.__R
+        r = -(x + zB)/self.__R
+        l, r = self.check_minmax(l, r)
+        self.__vel[0].data=l
+        self.__vel[1].data = r
+
+        #self.__vel[0].data= (x - zB)/self.__R #left wheels = (v - w*B)/r
+        #self.__vel[1].data= -(x + zB)/self.__R #right wheels (v + w*B)/r
+        
+        #self.get_logger().info('v1,v2,v3:  "%s"' % self.__vel[0].data)
+        #self.get_logger().info('v4,v5,v6: "%s"' % self.__vel[1].data)
 
         
         

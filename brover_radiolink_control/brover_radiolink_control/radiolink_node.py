@@ -10,7 +10,7 @@ import numpy as np
 SLOW = 0.2
 NORMAL = 0.4
 FAST = 0.8
-ROTATION = 2
+ROTATION = 2.5
 
 
 class RadiolinkController(Node):
@@ -27,14 +27,13 @@ class RadiolinkController(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
         self.vel_coeff = SLOW
-
         self.off_mode = True
         self.is_on = 0
 
 
     def joy_callback(self, msg: Joy):
 
-        if msg.axes[2] == 1.0 or msg.axes[4] < 0.5:
+        if msg.axes[2] == 1.0 or msg.axes[4] == 1.0 or msg.axes[4]< 0.8:
             self.off_mode = True
         else:
             self.off_mode = False
@@ -52,7 +51,8 @@ class RadiolinkController(Node):
             else: self.vel_coeff = NORMAL 
 
             self.cmd_vel_msg.linear.x = self.vel_coeff * msg.axes[1]
-            self.cmd_vel_msg.angular.z = self.vel_coeff *ROTATION* msg.axes[0]           
+            #self.cmd_vel_msg.angular.z = self.vel_coeff *ROTATION* msg.axes[0]   
+            self.cmd_vel_msg.angular.z = self.vel_coeff *ROTATION* msg.axes[3]         
 
     def timer_callback(self):
         if self.is_on:
