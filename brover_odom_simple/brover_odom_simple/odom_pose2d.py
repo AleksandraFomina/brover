@@ -74,6 +74,9 @@ class OdomPose2D(Node):
         self.yaw = euler[2]
         #self.get_logger().info(f"Euler angles: {euler}")
 
+    @staticmethod
+    def normalize_angle(a):
+        return math.atan2(math.sin(a), math.cos(a))
    
     def update_odometry(self):
         now = time.monotonic()
@@ -91,7 +94,7 @@ class OdomPose2D(Node):
         vR = wR * self.R
 
         v = (vL + vR) / 2.0
-        yaw = self.yaw-self.yaw_offset
+        yaw = self.normalize_angle(self.yaw-self.yaw_offset)
 
         self.x += v * math.cos(yaw) * dt
         self.y += v * math.sin(yaw) * dt
