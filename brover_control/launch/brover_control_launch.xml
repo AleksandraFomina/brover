@@ -5,4 +5,5 @@
 <node pkg="brover_radiolink_control" exec="radiolink_node" name="radiolink_control"/>
 <node pkg="brover_imu_node" exec="imu_node" name="imu"/>
 <node pkg="brover_odom_simple" exec="odom_pose2d" name="odom"/> 
+<node pkg="brover_bat_monitor" exec="bat_monitor_node" name="bat_monitor"/> 
 </launch>
