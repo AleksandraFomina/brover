@@ -1,11 +1,11 @@
-import scipy.signal
+#import scipy.signal
 import rclpy
 from rclpy.node import Node
 
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
-import scipy
-import numpy as np
+#import scipy
+#import numpy as np
 
 SLOW = 0.2
 NORMAL = 0.4
