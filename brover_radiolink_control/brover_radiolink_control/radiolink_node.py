@@ -12,13 +12,16 @@ class RadiolinkController(Node):
         self.declare_parameter("cmd_vel_topic", "/cmd_vel")
         self.declare_parameter("publish_period", 0.05)
         self.declare_parameter("joystick_timeout", 0.5)
-        self.declare_parameter("slow_speed", 0.2)
-        self.declare_parameter("normal_speed", 0.4)
-        self.declare_parameter("fast_speed", 0.8)
+
+        self.declare_parameter("slow_speed", 0.09375)
+        self.declare_parameter("normal_speed", 0.1875)
+        self.declare_parameter("fast_speed", 0.375)
         self.declare_parameter("rotation_scale", 2.5)
+
         self.declare_parameter("linear_axis", 1)
         self.declare_parameter("angular_axis", 3)
         self.declare_parameter("speed_axis", 6)
+
         self.declare_parameter("safety_axis_left", 2)
         self.declare_parameter("safety_axis_right", 4)
         self.declare_parameter("safety_threshold", 0.8)
