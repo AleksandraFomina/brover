@@ -59,6 +59,12 @@ class LowBatteryLedBlinker(Node):
         self.led_state = False
 
     def timer_callback(self):
+        if (
+            self.pending_led_call is not None
+            and not self.pending_led_call.done()
+        ):
+            return
+
         if self.low_battery:
             self.led_state = not self.led_state
             if self.led_state:
@@ -96,7 +102,10 @@ class LowBatteryLedBlinker(Node):
         try:
             future.result()
         except Exception as exc:
+            self.last_led = None
             self.get_logger().error(f"LED service call failed: {exc}")
+        finally:
+            self.pending_led_call = None
 
 
 def main(args=None):
