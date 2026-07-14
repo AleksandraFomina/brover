@@ -15,8 +15,8 @@ setup(
     zip_safe=True,
     maintainer='pi',
     maintainer_email='pi@todo.todo',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='Monitor BRover battery voltage and drive the HMI LED status.',
+    license='Apache-2.0',
     extras_require={
         'test': [
             'pytest',

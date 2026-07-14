@@ -15,8 +15,8 @@ setup(
     zip_safe=True,
     maintainer='pi',
     maintainer_email='sashavera1998@gmail.com',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='Publish simple Pose2D odometry for BRover.',
+    license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [

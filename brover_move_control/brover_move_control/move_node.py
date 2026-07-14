@@ -1,100 +1,108 @@
-import rclpy
-from rclpy.node import Node
+import math
 
-from std_msgs.msg import Float32
+import rclpy
 from geometry_msgs.msg import Twist
+from rclpy.node import Node
+from std_msgs.msg import Float32
 
 
 class RobotMover(Node):
-
     def __init__(self):
-        super().__init__('move_publisher')
+        super().__init__("move_publisher")
 
-        self.__pubs = []
-        for i in range(6):
-            topic = "/m_vel"+str(i+1)
-            self.__pubs.append(self.create_publisher(Float32, topic, 10))
+        self.declare_parameter("cmd_vel_topic", "/cmd_vel")
+        self.declare_parameter("wheel_velocity_topic_prefix", "/m_vel")
+        self.declare_parameter("wheel_radius", 0.0625)
+        self.declare_parameter("track_width", 0.42)
+        self.declare_parameter("max_wheel_velocity", 6.0)
+        self.declare_parameter("wheel_deadband", 0.001)
+        self.declare_parameter("publish_period", 0.05)
+        self.declare_parameter("cmd_vel_timeout", 0.25)
 
+        self.wheel_radius = self.get_parameter("wheel_radius").value
+        self.half_track_width = self.get_parameter("track_width").value / 2.0
+        self.max_wheel_velocity = self.get_parameter(
+            "max_wheel_velocity"
+        ).value
+        self.wheel_deadband = self.get_parameter("wheel_deadband").value
+        self.cmd_vel_timeout = self.get_parameter("cmd_vel_timeout").value
 
-        self.__subscription = self.create_subscription(
+        topic_prefix = self.get_parameter("wheel_velocity_topic_prefix").value
+        self.wheel_publishers = [
+            self.create_publisher(Float32, f"{topic_prefix}{idx}", 10)
+            for idx in range(1, 7)
+        ]
+
+        self.left_velocity = Float32()
+        self.right_velocity = Float32()
+        self.last_cmd_time = self.get_clock().now()
+
+        self.create_subscription(
             Twist,
-            '/cmd_vel',
-            self.listener_callback,
-            10)
-
-        timer_period = 0.05  # seconds
-        self.timer = self.create_timer(timer_period, self.timer_callback)
-
-        self.__max_vel = 9.6
-        self.__min_vel = 1.0
-        self.__W = 0.44 # width
-        self.__B = self.__W/2.0
-        self.__R = 0.0625 #wheel radius
-
-        vel123 = Float32()
-        vel456 = Float32()
-        self.__vel = [vel123, vel456]
-
+            self.get_parameter("cmd_vel_topic").value,
+            self.cmd_vel_callback,
+            10,
+        )
+        self.create_timer(
+            self.get_parameter("publish_period").value,
+            self.timer_callback,
+        )
 
     def timer_callback(self):
-        for  i, pub in enumerate(self.__pubs):
-            if i<3: pub.publish(self.__vel[0])
-            else: pub.publish(self.__vel[1])
-           # self.get_logger().info('v1,v2,v3:  "%s"' % self.__vel[0].data)
-           # self.get_logger().info('v4,v5,v6: "%s"' % self.__vel[1].data)
-  
-    def sign(self, a):
-        if a > 0:
-            return 1
-        elif a < 0:
-            return -1
-        else:
-            return a
-        
-    def check_minmax(self, l, r):
-        if abs(l) < self.__min_vel:
-            l = self.sign(l)*self.__min_vel
-        if abs(r) < self.__min_vel:
-            r = self.sign(r)*self.__min_vel
-        if abs(l) > self.__max_vel:
-            l = self.sign(l)*self.__max_vel
-        if abs(r) > self.__max_vel:
-            r = self.sign(r)*self.__max_vel
-        return l, r
-                       
-        
-    def listener_callback(self, msg):
-        x = float(msg.linear.x)
-        zB = float(msg.angular.z)*self.__B
-        l = (x - zB)/self.__R
-        r = -(x + zB)/self.__R
-        l, r = self.check_minmax(l, r)
-        self.__vel[0].data=l
-        self.__vel[1].data = r
+        if self.is_cmd_vel_stale():
+            self.set_wheel_velocities(0.0, 0.0)
 
-        #self.__vel[0].data= (x - zB)/self.__R #left wheels = (v - w*B)/r
-        #self.__vel[1].data= -(x + zB)/self.__R #right wheels (v + w*B)/r
-        
-        #self.get_logger().info('v1,v2,v3:  "%s"' % self.__vel[0].data)
-        #self.get_logger().info('v4,v5,v6: "%s"' % self.__vel[1].data)
+        for idx, publisher in enumerate(self.wheel_publishers):
+            velocity = self.left_velocity if idx < 3 else self.right_velocity
+            publisher.publish(velocity)
 
-        
-        
+    def is_cmd_vel_stale(self):
+        elapsed = (
+            self.get_clock().now() - self.last_cmd_time
+        ).nanoseconds / 1e9
+        return elapsed > self.cmd_vel_timeout
+
+    def cmd_vel_callback(self, msg):
+        self.last_cmd_time = self.get_clock().now()
+
+        linear = float(msg.linear.x)
+        angular = float(msg.angular.z)
+
+        left = (linear - angular * self.half_track_width) / self.wheel_radius
+        right = -(linear + angular * self.half_track_width) / self.wheel_radius
+        self.set_wheel_velocities(left, right)
+
+    def set_wheel_velocities(self, left, right):
+        self.left_velocity.data = self.limit_velocity(left)
+        self.right_velocity.data = self.limit_velocity(right)
+
+    def limit_velocity(self, value):
+        if abs(value) < self.wheel_deadband:
+            return 0.0
+        if not math.isfinite(value):
+            self.get_logger().warning(
+                "Non-finite wheel velocity requested, stopping"
+            )
+            return 0.0
+        return max(
+            -self.max_wheel_velocity,
+            min(self.max_wheel_velocity, value),
+        )
 
 
 def main(args=None):
     rclpy.init(args=args)
-
     robot_mover = RobotMover()
 
-    rclpy.spin(robot_mover)
+    try:
+        rclpy.spin(robot_mover)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        robot_mover.set_wheel_velocities(0.0, 0.0)
+        robot_mover.destroy_node()
+        rclpy.shutdown()
 
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    robot_mover.destroy_node()
-    rclpy.shutdown()
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

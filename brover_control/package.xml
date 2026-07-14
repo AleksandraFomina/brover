@@ -3,9 +3,17 @@
 <package format="3">
   <name>brover_control</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Launch and shared configuration package for BRover ROS nodes.</description>
   <maintainer email="sashavera1998@gmail.com">pi</maintainer>
-  <license>TODO: License declaration</license>
+  <license>Apache-2.0</license>
+
+  <exec_depend>brover_bat_monitor</exec_depend>
+  <exec_depend>brover_imu_node</exec_depend>
+  <exec_depend>brover_move_control</exec_depend>
+  <exec_depend>brover_odom_simple</exec_depend>
+  <exec_depend>brover_radiolink_control</exec_depend>
+  <exec_depend>cyphal_ros2_bridge</exec_depend>
+  <exec_depend>joy</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

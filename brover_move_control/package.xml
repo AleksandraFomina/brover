@@ -3,9 +3,13 @@
 <package format="3">
   <name>brover_move_control</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Convert cmd_vel commands to six wheel velocity commands for BRover.</description>
   <maintainer email="sashavera1998@gmail.com">pi</maintainer>
-  <license>TODO: License declaration</license>
+  <license>Apache-2.0</license>
+
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

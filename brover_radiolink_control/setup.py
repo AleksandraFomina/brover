@@ -15,8 +15,8 @@ setup(
     zip_safe=True,
     maintainer='pi',
     maintainer_email='sashavera1998@gmail.com',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='Translate Radiolink joystick input to cmd_vel.',
+    license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [

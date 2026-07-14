@@ -8,17 +8,12 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(std_srvs REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
 
 add_executable(imu_node src/imu_node.cpp)
-target_link_libraries(imu_node -lhidapi-libusb)
+target_link_libraries(imu_node hidapi-libusb)
 
-ament_target_dependencies(imu_node rclcpp std_msgs sensor_msgs std_srvs)
+ament_target_dependencies(imu_node rclcpp sensor_msgs)
 
 target_include_directories(imu_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -27,6 +22,9 @@ target_compile_features(imu_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and 
 
 install(TARGETS imu_node
   DESTINATION lib/${PROJECT_NAME})
+
+install(FILES 50-usb-voltbroimu.rules
+  DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -1,79 +1,138 @@
-#import scipy.signal
 import rclpy
-from rclpy.node import Node
-
 from geometry_msgs.msg import Twist
+from rclpy.node import Node
 from sensor_msgs.msg import Joy
-#import scipy
-#import numpy as np
-
-SLOW = 0.2
-NORMAL = 0.4
-FAST = 0.8
-ROTATION = 2.5
 
 
 class RadiolinkController(Node):
     def __init__(self):
         super().__init__("radiolink")
 
-      
-        self.joy_sub = self.create_subscription(Joy, "joy", self.joy_callback, 10)
+        self.declare_parameter("joy_topic", "joy")
+        self.declare_parameter("cmd_vel_topic", "/cmd_vel")
+        self.declare_parameter("publish_period", 0.05)
+        self.declare_parameter("joystick_timeout", 0.5)
+        self.declare_parameter("slow_speed", 0.2)
+        self.declare_parameter("normal_speed", 0.4)
+        self.declare_parameter("fast_speed", 0.8)
+        self.declare_parameter("rotation_scale", 2.5)
+        self.declare_parameter("linear_axis", 1)
+        self.declare_parameter("angular_axis", 3)
+        self.declare_parameter("speed_axis", 6)
+        self.declare_parameter("safety_axis_left", 2)
+        self.declare_parameter("safety_axis_right", 4)
+        self.declare_parameter("safety_threshold", 0.8)
 
-        self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.joystick_timeout = self.get_parameter("joystick_timeout").value
+        self.slow_speed = self.get_parameter("slow_speed").value
+        self.normal_speed = self.get_parameter("normal_speed").value
+        self.fast_speed = self.get_parameter("fast_speed").value
+        self.rotation_scale = self.get_parameter("rotation_scale").value
+        self.linear_axis = self.get_parameter("linear_axis").value
+        self.angular_axis = self.get_parameter("angular_axis").value
+        self.speed_axis = self.get_parameter("speed_axis").value
+        self.safety_axis_left = self.get_parameter("safety_axis_left").value
+        self.safety_axis_right = self.get_parameter("safety_axis_right").value
+        self.safety_threshold = self.get_parameter("safety_threshold").value
+
         self.cmd_vel_msg = Twist()
+        self.enabled = False
+        self.last_joy_time = None
 
-        timer_period = 0.05  # seconds
-        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.create_subscription(
+            Joy,
+            self.get_parameter("joy_topic").value,
+            self.joy_callback,
+            10,
+        )
+        self.cmd_vel_pub = self.create_publisher(
+            Twist,
+            self.get_parameter("cmd_vel_topic").value,
+            10,
+        )
+        self.create_timer(
+            self.get_parameter("publish_period").value,
+            self.timer_callback,
+        )
 
-        self.vel_coeff = SLOW
-        self.off_mode = True
-        self.is_on = 0
+    def joy_callback(self, msg):
+        self.last_joy_time = self.get_clock().now()
 
+        if not self.has_required_axes(msg):
+            self.get_logger().warning("Joy message has too few axes, stopping")
+            self.enabled = False
+            self.stop()
+            return
 
-    def joy_callback(self, msg: Joy):
+        self.enabled = self.is_safety_enabled(msg)
+        if not self.enabled:
+            self.stop()
+            return
 
-        if msg.axes[2] == 1.0 or msg.axes[4] == 1.0 or msg.axes[4]< 0.8:
-            self.off_mode = True
-        else:
-            self.off_mode = False
-            self.is_on = 1
+        speed = self.select_speed(msg.axes[self.speed_axis])
+        self.cmd_vel_msg.linear.x = speed * msg.axes[self.linear_axis]
+        self.cmd_vel_msg.angular.z = (
+            speed * self.rotation_scale * msg.axes[self.angular_axis]
+        )
 
-        if self.off_mode == True:
-            self.cmd_vel_msg.linear.x = 0.0
-            self.cmd_vel_msg.angular.z = 0.0
+    def has_required_axes(self, msg):
+        max_axis = max(
+            self.linear_axis,
+            self.angular_axis,
+            self.speed_axis,
+            self.safety_axis_left,
+            self.safety_axis_right,
+        )
+        return len(msg.axes) > max_axis
 
-        else:
-            if msg.axes[6] > 0.5:
-                self.vel_coeff = SLOW
-            elif msg.axes[6] < -0.5:
-                self.vel_coeff = FAST
-            else: self.vel_coeff = NORMAL 
+    def is_safety_enabled(self, msg):
+        return (
+            msg.axes[self.safety_axis_left] < 1.0
+            and msg.axes[self.safety_axis_right] < 1.0
+            and msg.axes[self.safety_axis_right] >= self.safety_threshold
+        )
 
-            self.cmd_vel_msg.linear.x = self.vel_coeff * msg.axes[1]
-            #self.cmd_vel_msg.angular.z = self.vel_coeff *ROTATION* msg.axes[0]   
-            self.cmd_vel_msg.angular.z = self.vel_coeff *ROTATION* msg.axes[3]         
+    def select_speed(self, speed_axis_value):
+        if speed_axis_value > 0.5:
+            return self.slow_speed
+        if speed_axis_value < -0.5:
+            return self.fast_speed
+        return self.normal_speed
 
     def timer_callback(self):
-        if self.is_on:
+        if self.is_joystick_stale():
+            self.enabled = False
+            self.stop()
+
+        if self.enabled:
             self.cmd_vel_pub.publish(self.cmd_vel_msg)
-            if self.off_mode: 
-                self.is_on = 0
-        #self.get_logger().info('Publishing: "%s"' % self.is_on)
+
+    def is_joystick_stale(self):
+        if self.last_joy_time is None:
+            return False
+        elapsed = (
+            self.get_clock().now() - self.last_joy_time
+        ).nanoseconds / 1e9
+        return elapsed > self.joystick_timeout
+
+    def stop(self):
+        self.cmd_vel_msg.linear.x = 0.0
+        self.cmd_vel_msg.angular.z = 0.0
+        self.cmd_vel_pub.publish(self.cmd_vel_msg)
 
 
 def main(args=None):
     rclpy.init(args=args)
-
     radiolink = RadiolinkController()
 
-    rclpy.spin(radiolink)
-
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    radiolink.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(radiolink)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        radiolink.stop()
+        radiolink.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":
